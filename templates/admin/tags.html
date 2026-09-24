@@ -1,0 +1,78 @@
+{{define "title"}}标签管理 · 管理后台{{end}}
+
+{{define "content"}}
+<div class="filter-bar">
+  <span class="field-hint">共 {{len .Tags}} 个标签。修改名称或别名后点击「保存」即时生效。</span>
+  <span class="spacer" style="margin-left:auto"></span>
+  <form method="post" action="/admin/tags/cleanup"
+        data-confirm="将删除所有没有被任何文章引用的标签，确定继续吗？">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <button class="btn" type="submit">清理空标签</button>
+  </form>
+</div>
+
+{{if .Tags}}
+  {{/* 每行一个独立表单，通过 form 属性关联，避免在表格里嵌套 form */}}
+  {{range .Tags}}
+    <form id="tag-save-{{.ID}}" method="post" action="/admin/tags/{{.ID}}">
+      <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+    </form>
+    <form id="tag-del-{{.ID}}" method="post" action="/admin/tags/{{.ID}}/delete"
+          data-confirm="确定删除标签「{{.Name}}」吗？{{if .Count}}仅解除与 {{.Count}} 篇文章的关联，文章会保留。{{else}}该标签没有关联文章。{{end}}">
+      <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+    </form>
+    <form id="tag-del-all-{{.ID}}" method="post" action="/admin/tags/{{.ID}}/delete"
+          data-confirm="⚠️ 将同时删除「{{.Name}}」下的 {{.Count}} 篇文章，且无法恢复！确定继续吗？">
+      <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+      <input type="hidden" name="remove_posts" value="on">
+    </form>
+  {{end}}
+
+  <div class="panel">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:30%">名称</th>
+            <th style="width:28%">别名 (slug)</th>
+            <th class="col-num">已发布</th>
+            <th class="col-num">草稿</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Tags}}
+          <tr>
+            <td>
+              <input form="tag-save-{{.ID}}" type="text" name="name" value="{{.Name}}"
+                     required aria-label="标签名称">
+            </td>
+            <td>
+              <input form="tag-save-{{.ID}}" type="text" name="slug" value="{{.Slug}}"
+                     aria-label="标签别名" style="font-family:var(--font-mono);font-size:.8rem">
+            </td>
+            <td class="col-num">{{.PublishedCount}}</td>
+            <td class="col-num">{{.DraftCount}}</td>
+            <td class="col-actions">
+              <div class="btn-row">
+                <button class="btn btn-sm btn-primary" type="submit" form="tag-save-{{.ID}}">保存</button>
+                <a class="btn btn-sm" href="/tag/{{.Slug}}" target="_blank" rel="noopener noreferrer">查看</a>
+                <button class="btn btn-sm btn-danger" type="submit" form="tag-del-{{.ID}}">删除</button>
+                {{if .Count}}
+                  <button class="btn btn-sm btn-danger" type="submit" form="tag-del-all-{{.ID}}"
+                          title="删除标签并移除其下所有文章">连文章删除</button>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{{else}}
+  <div class="panel">
+    {{template "empty" "还没有任何标签。给文章加上标签后会自动出现在这里。"}}
+  </div>
+{{end}}
+{{end}}

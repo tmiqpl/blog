@@ -1,0 +1,22 @@
+{{define "title"}}{{.Heading}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<header class="page-head">
+  <h1>{{.Heading}}</h1>
+  <p class="page-sub">按主题浏览全部文章，共 {{len .Tags}} 个标签</p>
+</header>
+
+{{if .Tags}}
+  <div class="tag-grid">
+    {{range .Tags}}
+      <a class="tag-card" href="/tag/{{.Slug}}">
+        <span class="tag-card-hash" aria-hidden="true">#</span>
+        <span class="tag-card-name">{{.Name}}</span>
+        <span class="tag-card-count">{{.Count}} 篇</span>
+      </a>
+    {{end}}
+  </div>
+{{else}}
+  {{template "empty-state" "还没有任何标签。"}}
+{{end}}
+{{end}}

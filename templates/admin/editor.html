@@ -1,0 +1,101 @@
+{{define "title"}}{{if .IsNew}}写文章{{else}}编辑文章{{end}} · 管理后台{{end}}
+
+{{define "content"}}
+<form class="editor-form" method="post"
+      action="{{if .IsNew}}/admin/posts{{else}}/admin/posts/{{.PostID}}{{end}}"
+      id="editor-form">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+
+  <div class="editor-head">
+    <input class="editor-title" type="text" name="title" value="{{.Form.Title}}"
+           placeholder="文章标题…" required autofocus autocomplete="off">
+    <div class="editor-head-actions">
+      {{if not .IsNew}}
+        <a class="btn btn-sm" href="/post/{{.Form.Slug}}" target="_blank" rel="noopener noreferrer">预览 ↗</a>
+      {{end}}
+      <a class="btn" href="/admin/posts">取消</a>
+      <button class="btn btn-primary" type="submit" id="editor-submit">保存</button>
+    </div>
+  </div>
+
+  {{if .Errors}}
+    <div class="flash flash-error" role="alert">
+      <ul>
+        {{range .Errors}}<li>{{.}}</li>{{end}}
+      </ul>
+    </div>
+  {{end}}
+
+  {{if .UpdatedAt}}
+    <p class="field-hint">最后更新于 {{.UpdatedAt}}</p>
+  {{end}}
+
+  <details class="editor-meta" {{if .IsNew}}open{{end}}>
+    <summary>文章设置</summary>
+    <div class="form-grid">
+      <label class="field">
+        <span class="field-label">别名 (slug)</span>
+        <input type="text" name="slug" value="{{.Form.Slug}}" placeholder="留空则根据标题自动生成" autocomplete="off">
+        <span class="field-hint">决定文章链接：/post/&lt;别名&gt;</span>
+      </label>
+
+      <label class="field">
+        <span class="field-label">发布时间</span>
+        <input type="datetime-local" name="created_at" value="{{.Form.CreatedAt}}">
+      </label>
+
+      <label class="field span-2">
+        <span class="field-label">标签</span>
+        <input type="text" name="tags" value="{{.Form.Tags}}" list="tag-suggestions"
+               placeholder="用逗号分隔，例如：Golang, 后端" autocomplete="off">
+        <span class="field-hint">输入已有标签会自动提示</span>
+      </label>
+
+      <label class="field span-2">
+        <span class="field-label">摘要</span>
+        <textarea name="summary" rows="2" placeholder="留空则自动从正文中提取前 120 字">{{.Form.Summary}}</textarea>
+      </label>
+
+      <label class="field-check span-2">
+        <input type="checkbox" name="published" {{if .Form.Published}}checked{{end}}>
+        <span>立即发布（取消勾选则保存为草稿，不会出现在站点上）</span>
+      </label>
+    </div>
+
+    <datalist id="tag-suggestions">
+      {{range .AllTags}}<option value="{{.Name}}"></option>{{end}}
+    </datalist>
+  </details>
+
+  <div class="editor-split">
+    <div class="editor-pane">
+      <div class="editor-toolbar">
+        <span class="editor-toolbar-label">Markdown</span>
+        <button class="md-btn" type="button" data-md="h2" title="二级标题">H</button>
+        <button class="md-btn" type="button" data-md="bold" title="加粗">B</button>
+        <button class="md-btn" type="button" data-md="italic" title="斜体"><em>I</em></button>
+        <button class="md-btn" type="button" data-md="strike" title="删除线"><s>S</s></button>
+        <button class="md-btn" type="button" data-md="code" title="行内代码">&lt;/&gt;</button>
+        <button class="md-btn" type="button" data-md="codeblock" title="代码块">{ }</button>
+        <button class="md-btn" type="button" data-md="quote" title="引用">❝</button>
+        <button class="md-btn" type="button" data-md="ul" title="无序列表">•</button>
+        <button class="md-btn" type="button" data-md="ol" title="有序列表">1.</button>
+        <button class="md-btn" type="button" data-md="link" title="链接">🔗</button>
+        <button class="md-btn" type="button" data-md="table" title="表格">▦</button>
+        <button class="md-btn" type="button" data-md="hr" title="分割线">—</button>
+      </div>
+      <textarea id="editor-content" name="content" spellcheck="false"
+                placeholder="在这里用 Markdown 写作…">{{.Form.Content}}</textarea>
+    </div>
+
+    <div class="editor-pane">
+      <div class="editor-toolbar">
+        <span class="editor-toolbar-label">预览</span>
+        <span class="spacer"></span>
+        <span class="editor-stats" id="editor-stats"></span>
+      </div>
+      <div class="prose editor-preview" id="editor-preview"></div>
+    </div>
+  </div>
+</form>
+{{end}}

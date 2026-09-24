@@ -1,0 +1,14 @@
+{{define "title"}}{{.Heading}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="layout">
+  <div class="content-col">
+    <header class="page-head">
+      <h1>{{.Heading}}</h1>
+    </header>
+    <div class="prose" id="about-body">{{.HTML}}</div>
+  </div>
+
+  {{template "sidebar" .}}
+</div>
+{{end}}

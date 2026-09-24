@@ -1,0 +1,45 @@
+[Unit]
+Description=个人博客系统（Go + SQLite）
+Documentation=https://github.com/tmiqpl/blog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# 专用系统用户（创建方式见 README 的 Linux 部署章节）
+User=blog
+Group=blog
+WorkingDirectory=/opt/blog
+
+# 管理员密码不写在这里，改用下面 EnvironmentFile 指向的文件（权限 600）
+EnvironmentFile=-/etc/blog/blog.env
+
+ExecStart=/opt/blog/blog-linux-amd64 serve -addr 127.0.0.1:18080 -db /opt/blog/data/blog.db
+
+# 进程被信号终止时正常退出，让 Go 侧完成优雅关闭
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+Restart=on-failure
+RestartSec=3
+
+# 加固：只允许写自己的数据目录
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/opt/blog/data
+
+# 日志走 journald，用 journalctl -u blog -f 查看
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blog
+
+[Install]
+WantedBy=multi-user.target

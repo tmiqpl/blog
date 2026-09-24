@@ -1,0 +1,22 @@
+{{define "title"}}{{.Heading}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="layout">
+  <div class="content-col">
+    <header class="page-head">
+      <h1>{{.Heading}}</h1>
+      <p class="page-sub">{{.Subheading}}</p>
+    </header>
+
+    {{if .Posts}}
+      <div class="post-list post-list--grid">
+        {{range .Posts}}{{template "post-card" .}}{{end}}
+      </div>
+    {{else}}
+      {{template "empty-state" "没有找到匹配的文章，换个关键词再试试？"}}
+    {{end}}
+  </div>
+
+  {{template "sidebar" .}}
+</div>
+{{end}}

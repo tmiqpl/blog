@@ -1,0 +1,13 @@
+{{/* 空状态 */}}
+{{define "empty"}}
+<div class="empty">
+  <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+  <p>{{.}}</p>
+</div>
+{{end}}
+
+{{/* 文章状态徽标 */}}
+{{define "status-badge"}}
+{{if .}}<span class="badge badge-published">已发布</span>
+{{else}}<span class="badge badge-draft">草稿</span>{{end}}
+{{end}}

@@ -1,0 +1,23 @@
+{{define "title"}}{{.Heading}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="layout">
+  <div class="content-col">
+    <header class="page-head">
+      <h1>{{.Heading}}</h1>
+      {{if .Subheading}}<p class="page-sub">{{.Subheading}}</p>{{end}}
+    </header>
+
+    {{if .Posts}}
+      <div class="post-list post-list--grid">
+        {{range .Posts}}{{template "post-card" .}}{{end}}
+      </div>
+      {{template "pagination" .Page}}
+    {{else}}
+      {{template "empty-state" "这里还没有文章，先去写一篇吧。"}}
+    {{end}}
+  </div>
+
+  {{template "sidebar" .}}
+</div>
+{{end}}

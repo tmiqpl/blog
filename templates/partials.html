@@ -1,0 +1,103 @@
+{{/* 文章卡片 */}}
+{{define "post-card"}}
+<article class="post-card">
+  <div class="post-meta">
+    <time datetime="{{formatDateShort .CreatedAt}}">{{formatDate .CreatedAt}}</time>
+    <span class="meta-dot" aria-hidden="true">·</span>
+    <span>{{.ReadingMinutes}} 分钟阅读</span>
+  </div>
+  <h2 class="post-card-title">
+    <a href="/post/{{.Slug}}">{{.Title}}</a>
+  </h2>
+  <p class="post-card-summary">{{.Summary}}</p>
+  <div class="post-card-foot">
+    <div class="post-card-tags">
+      {{range .Tags}}<a class="chip" href="/tag/{{.Slug}}">#{{.Name}}</a>{{end}}
+    </div>
+    <a class="read-more" href="/post/{{.Slug}}" aria-label="阅读《{{.Title}}》">
+      阅读全文
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+</article>
+{{end}}
+
+{{/* 分页 */}}
+{{define "pagination"}}
+{{if gt .TotalPages 1}}
+<nav class="pagination" aria-label="分页导航">
+  {{if .HasPrev}}
+    <a class="page-btn" href="{{.PrevURL}}" rel="prev">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      上一页
+    </a>
+  {{else}}
+    <span class="page-btn is-disabled">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      上一页
+    </span>
+  {{end}}
+
+  <div class="page-numbers">
+    {{range .Pages}}
+      {{if .Current}}
+        <span class="page-num is-current" aria-current="page">{{.Number}}</span>
+      {{else}}
+        <a class="page-num" href="{{.URL}}">{{.Number}}</a>
+      {{end}}
+    {{end}}
+  </div>
+
+  {{if .HasNext}}
+    <a class="page-btn" href="{{.NextURL}}" rel="next">
+      下一页
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  {{else}}
+    <span class="page-btn is-disabled">
+      下一页
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </span>
+  {{end}}
+</nav>
+{{end}}
+{{end}}
+
+{{/* 侧边栏 */}}
+{{define "sidebar"}}
+<aside class="sidebar">
+  <section class="widget">
+    <h2 class="widget-title">标签云</h2>
+    {{if .Tags}}
+      <div class="tag-cloud">
+        {{range .Tags}}
+          <a class="tag-pill" href="/tag/{{.Slug}}">
+            <span class="tag-pill-name">{{.Name}}</span>
+            <span class="tag-pill-count">{{.Count}}</span>
+          </a>
+        {{end}}
+      </div>
+    {{else}}
+      <p class="muted">暂无标签</p>
+    {{end}}
+  </section>
+
+  <section class="widget">
+    <h2 class="widget-title">关于本站</h2>
+    <p class="widget-text">{{.Site.Bio}}</p>
+    <div class="widget-actions">
+      {{if .Site.GitHub}}<a class="btn btn-sm" href="{{.Site.GitHub}}" target="_blank" rel="noopener noreferrer">GitHub</a>{{end}}
+      <a class="btn btn-sm" href="/about">了解更多</a>
+    </div>
+  </section>
+</aside>
+{{end}}
+
+{{/* 空状态 */}}
+{{define "empty-state"}}
+<div class="empty-state">
+  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v14.5"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H19"/><path d="M9 8h6M9 12h4"/></svg>
+  <p>{{.}}</p>
+  <a class="btn" href="/">返回首页</a>
+</div>
+{{end}}

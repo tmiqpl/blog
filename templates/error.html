@@ -1,0 +1,13 @@
+{{define "title"}}{{.Code}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="error-page">
+  <p class="error-code" aria-hidden="true">{{.Code}}</p>
+  <h1 class="error-heading">{{.Heading}}</h1>
+  <p class="error-message">{{.Message}}</p>
+  <div class="error-actions">
+    <a class="btn btn-primary" href="/">返回首页</a>
+    <a class="btn" href="/tags">浏览标签</a>
+  </div>
+</div>
+{{end}}

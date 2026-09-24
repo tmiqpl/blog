@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Markdown 正文排版 — 前台文章页与后台预览共用
+   依赖 tokens.css 中的 CSS 变量
+   ========================================================================== */
+
+.prose {
+  font-size: 1.02rem;
+  line-height: 1.85;
+  color: var(--text-dim);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.prose > *:first-child { margin-top: 0; }
+.prose > *:last-child { margin-bottom: 0; }
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: var(--text);
+  margin: 2.2em 0 .8em;
+  scroll-margin-top: 90px;
+}
+.prose h1 { font-size: 1.7rem; }
+.prose h2 {
+  font-size: 1.42rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+.prose h3 { font-size: 1.18rem; }
+.prose h4 { font-size: 1.04rem; }
+.prose h5,
+.prose h6 { font-size: .96rem; color: var(--text-dim); }
+
+.prose p { margin: 0 0 1.15em; }
+
+.prose a {
+  color: var(--accent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.prose a:hover {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+}
+
+.prose strong { color: var(--text); font-weight: 650; }
+.prose em { font-style: italic; }
+.prose del { color: var(--text-muted); }
+
+.prose ul,
+.prose ol {
+  margin: 0 0 1.15em;
+  padding-left: 1.5em;
+}
+.prose li { margin-bottom: .4em; }
+.prose li::marker { color: var(--accent); }
+.prose ul ul,
+.prose ol ol,
+.prose ul ol,
+.prose ol ul { margin-bottom: 0; margin-top: .4em; }
+
+.prose input[type="checkbox"] {
+  margin-right: .45em;
+  accent-color: var(--accent);
+}
+.prose li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.25em; }
+
+.prose blockquote {
+  margin: 1.4em 0;
+  padding: .8em 1.15em;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+  color: var(--text-dim);
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: .875em;
+  padding: .16em .4em;
+  border-radius: 4px;
+  background: var(--inline-bg);
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.prose pre {
+  position: relative;
+  margin: 1.4em 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  overflow-x: auto;
+  line-height: 1.65;
+  font-size: .875rem;
+}
+
+/* 代码块外层容器：承载不随内容滚动的复制按钮 */
+.code-block {
+  position: relative;
+  margin: 1.4em 0;
+}
+.code-block pre { margin: 0; }
+
+.code-copy {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  padding: .22rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: .72rem;
+  line-height: 1.5;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease, color .15s ease, border-color .15s ease;
+}
+.code-block:hover .code-copy,
+.code-copy:focus-visible { opacity: 1; }
+.code-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.code-copy.is-done {
+  color: var(--accent);
+  border-color: var(--accent);
+  opacity: 1;
+}
+@media (hover: none) {
+  .code-copy { opacity: .75; }
+}
+.prose pre code {
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* 代码块滚动条 */
+.prose pre::-webkit-scrollbar { height: 8px; }
+.prose pre::-webkit-scrollbar-track { background: transparent; }
+.prose pre::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.prose pre::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.prose table {
+  width: 100%;
+  margin: 1.4em 0;
+  border-collapse: collapse;
+  font-size: .92rem;
+  display: block;
+  overflow-x: auto;
+}
+.prose thead { background: var(--bg-soft); }
+.prose th,
+.prose td {
+  padding: .6rem .85rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.prose th {
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.prose tbody tr:nth-child(even) { background: var(--bg-soft); }
+
+.prose img {
+  border-radius: var(--radius);
+  margin: 1.2em 0;
+  border: 1px solid var(--border-soft);
+}
+
+.prose hr { margin: 2.5em 0; }
+
+/* 标题锚点 */
+.prose .heading-anchor {
+  margin-left: .4rem;
+  color: var(--text-muted);
+  opacity: 0;
+  font-weight: 400;
+  border: 0;
+  transition: opacity .15s ease;
+}
+.prose h1:hover .heading-anchor,
+.prose h2:hover .heading-anchor,
+.prose h3:hover .heading-anchor,
+.prose h4:hover .heading-anchor { opacity: 1; }

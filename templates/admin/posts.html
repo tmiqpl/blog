@@ -1,0 +1,103 @@
+{{define "title"}}文章管理 · 管理后台{{end}}
+
+{{define "content"}}
+<div class="filter-bar">
+  <div class="tabs">
+    <a href="{{postListURL "" .Filter.Keyword 1}}" {{if eq .Filter.Status ""}}class="is-active"{{end}}>全部</a>
+    <a href="{{postListURL "published" .Filter.Keyword 1}}" {{if eq .Filter.Status "published"}}class="is-active"{{end}}>已发布</a>
+    <a href="{{postListURL "draft" .Filter.Keyword 1}}" {{if eq .Filter.Status "draft"}}class="is-active"{{end}}>草稿</a>
+  </div>
+
+  <form class="search-inline" method="get" action="/admin/posts" role="search">
+    {{if .Filter.Status}}<input type="hidden" name="status" value="{{.Filter.Status}}">{{end}}
+    <input type="search" name="q" value="{{.Filter.Keyword}}" placeholder="搜索标题、别名或正文…" aria-label="搜索文章">
+  </form>
+
+  <span class="spacer" style="margin-left:auto"></span>
+  <span class="field-hint">共 {{.Total}} 篇</span>
+  <a class="btn btn-primary" href="/admin/posts/new">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    写文章
+  </a>
+</div>
+
+<div class="panel">
+  {{if .Posts}}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="col-title">标题</th>
+            <th>状态</th>
+            <th>标签</th>
+            <th class="col-num">发布时间</th>
+            <th class="col-num">更新时间</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Posts}}
+          <tr>
+            <td>
+              <a class="post-link" href="/admin/posts/{{.ID}}/edit">{{.Title}}</a>
+              <span class="post-slug">/post/{{.Slug}}</span>
+            </td>
+            <td>{{template "status-badge" .Published}}</td>
+            <td>
+              {{if .Tags}}
+                <div class="tag-chips">
+                  {{range .Tags}}<span class="chip-mini">{{.Name}}</span>{{end}}
+                </div>
+              {{else}}<span class="muted">—</span>{{end}}
+            </td>
+            <td class="col-num">{{formatDate .CreatedAt}}</td>
+            <td class="col-num">{{relativeTime .UpdatedAt}}</td>
+            <td class="col-actions">
+              <div class="btn-row">
+                <a class="btn btn-sm" href="/admin/posts/{{.ID}}/edit">编辑</a>
+                <form method="post" action="/admin/posts/{{.ID}}/toggle">
+                  <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+                  <input type="hidden" name="status" value="{{$.Filter.Status}}">
+                  <input type="hidden" name="q" value="{{$.Filter.Keyword}}">
+                  <input type="hidden" name="page" value="{{$.Page.Page}}">
+                  <button class="btn btn-sm" type="submit">{{if .Published}}转草稿{{else}}发布{{end}}</button>
+                </form>
+                <form method="post" action="/admin/posts/{{.ID}}/delete"
+                      data-confirm="确定要删除《{{.Title}}》吗？此操作不可撤销。">
+                  <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+                  <button class="btn btn-sm btn-danger" type="submit">删除</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+
+    {{if gt .Page.TotalPages 1}}
+    <nav class="pager" aria-label="分页">
+      {{if .HasPrev}}<a href="{{.PrevURL}}">‹</a>{{else}}<span class="is-disabled">‹</span>{{end}}
+      {{range .Page.Pages}}
+        {{if eq . $.Page.Page}}
+          <span class="is-current">{{.}}</span>
+        {{else}}
+          <a href="{{postListURL $.Filter.Status $.Filter.Keyword .}}">{{.}}</a>
+        {{end}}
+      {{end}}
+      {{if .HasNext}}<a href="{{.NextURL}}">›</a>{{else}}<span class="is-disabled">›</span>{{end}}
+    </nav>
+    {{end}}
+  {{else}}
+    {{if .Filter.Keyword}}
+      {{template "empty" "没有匹配的文章，换个关键词试试。"}}
+    {{else if eq .Filter.Status "draft"}}
+      {{template "empty" "还没有草稿。"}}
+    {{else if eq .Filter.Status "published"}}
+      {{template "empty" "还没有已发布的文章。"}}
+    {{else}}
+      {{template "empty" "还没有任何文章，点击右上角「写文章」开始创作。"}}
+    {{end}}
+  {{end}}
+</div>
+{{end}}

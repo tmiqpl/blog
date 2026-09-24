@@ -1,0 +1,82 @@
+{{define "title"}}站点设置 · 管理后台{{end}}
+
+{{define "content"}}
+<form method="post" action="/admin/settings">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+
+  {{if .Errors}}
+    <div class="flash flash-error" role="alert">
+      <ul>
+        {{range .Errors}}<li>{{.}}</li>{{end}}
+      </ul>
+    </div>
+  {{end}}
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">基本信息</h2>
+      <span class="spacer"></span>
+      <span class="field-hint">保存后前台立即生效</span>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <label class="field">
+          <span class="field-label">站点标题</span>
+          <input type="text" name="site_title" value="{{.Form.Title}}" required maxlength="60">
+          <span class="field-hint">显示在浏览器标签与页头</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">站长名称</span>
+          <input type="text" name="site_author" value="{{.Form.Author}}" maxlength="40">
+          <span class="field-hint">显示在页脚版权信息中</span>
+        </label>
+
+        <label class="field span-2">
+          <span class="field-label">站点描述</span>
+          <input type="text" name="site_description" value="{{.Form.Description}}" maxlength="160">
+          <span class="field-hint">用于页面的 meta description 与页脚</span>
+        </label>
+
+        <label class="field span-2">
+          <span class="field-label">侧边栏简介</span>
+          <textarea name="site_bio" rows="2" maxlength="200">{{.Form.Bio}}</textarea>
+          <span class="field-hint">显示在文章页侧边栏的「关于本站」卡片</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">联系方式</h2>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <label class="field">
+          <span class="field-label">GitHub 地址</span>
+          <input type="url" name="site_github" value="{{.Form.GitHub}}" placeholder="https://github.com/yourname">
+          <span class="field-hint">留空则不显示链接</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">联系邮箱</span>
+          <input type="email" name="site_email" value="{{.Form.Email}}" placeholder="hello@example.com">
+          <span class="field-hint">留空则不显示链接</span>
+        </label>
+
+        <label class="field span-2">
+          <span class="field-label">ICP 备案号</span>
+          <input type="text" name="site_icp" value="{{.Form.ICP}}" placeholder="例如：京ICP备00000000号">
+          <span class="field-hint">留空则不在页脚显示</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">保存设置</button>
+        <a class="btn" href="/" target="_blank" rel="noopener noreferrer">查看站点 ↗</a>
+      </div>
+    </div>
+  </div>
+</form>
+{{end}}

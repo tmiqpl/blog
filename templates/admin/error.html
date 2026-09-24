@@ -1,0 +1,13 @@
+{{define "title"}}{{.Heading}} · 管理后台{{end}}
+
+{{define "content"}}
+<div class="admin-error">
+  <p class="admin-error-code" aria-hidden="true">{{.Code}}</p>
+  <h1>{{.Heading}}</h1>
+  <p>{{.Message}}</p>
+  <div class="admin-error-actions">
+    <a class="btn btn-primary" href="/admin">返回仪表盘</a>
+    <a class="btn" href="/">查看站点</a>
+  </div>
+</div>
+{{end}}

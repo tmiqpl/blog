@@ -1,0 +1,116 @@
+{{define "title"}}仪表盘 · 管理后台{{end}}
+
+{{define "content"}}
+<div class="stat-grid">
+  <div class="stat-card">
+    <p class="stat-label">文章总数</p>
+    <p class="stat-value">{{.Stats.TotalPosts}}</p>
+    <p class="stat-hint">已发布 {{.Stats.PublishedPosts}} · 草稿 {{.Stats.DraftPosts}}</p>
+  </div>
+
+  <div class="stat-card">
+    <p class="stat-label">发布率</p>
+    <p class="stat-value">{{.PublishedPct}}%</p>
+    <div class="progress"><div class="progress-bar" style="width: {{.PublishedPct}}%"></div></div>
+  </div>
+
+  <div class="stat-card">
+    <p class="stat-label">标签数量</p>
+    <p class="stat-value">{{.TagCount}}</p>
+    <p class="stat-hint"><a href="/admin/tags">管理标签 →</a></p>
+  </div>
+
+  <div class="stat-card">
+    <p class="stat-label">正文字数</p>
+    <p class="stat-value">{{.Stats.TotalWords}}</p>
+    <p class="stat-hint">所有文章累计字符数</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">最近更新</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-sm" href="/admin/posts">全部文章</a>
+    <a class="btn btn-sm btn-primary" href="/admin/posts/new">写文章</a>
+  </div>
+
+  {{if .RecentPosts}}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="col-title">标题</th>
+            <th>状态</th>
+            <th>标签</th>
+            <th class="col-num">更新时间</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .RecentPosts}}
+          <tr>
+            <td>
+              <a class="post-link" href="/admin/posts/{{.ID}}/edit">{{.Title}}</a>
+              <span class="post-slug">/post/{{.Slug}}</span>
+            </td>
+            <td>{{template "status-badge" .Published}}</td>
+            <td>
+              {{if .Tags}}
+                <div class="tag-chips">
+                  {{range .Tags}}<span class="chip-mini">{{.Name}}</span>{{end}}
+                </div>
+              {{else}}<span class="muted">—</span>{{end}}
+            </td>
+            <td class="col-num">{{relativeTime .UpdatedAt}}</td>
+            <td class="col-actions">
+              <a class="btn btn-sm" href="/admin/posts/{{.ID}}/edit">编辑</a>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{else}}
+    {{template "empty" "还没有任何文章，点击右上角「写文章」开始吧。"}}
+  {{end}}
+</div>
+
+{{if .DraftPosts}}
+<div class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">待完成的草稿</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-sm" href="/admin/posts?status=draft">查看全部草稿</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="col-title">标题</th>
+          <th class="col-num">最后编辑</th>
+          <th class="col-actions">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .DraftPosts}}
+        <tr>
+          <td><a class="post-link" href="/admin/posts/{{.ID}}/edit">{{.Title}}</a></td>
+          <td class="col-num">{{relativeTime .UpdatedAt}}</td>
+          <td class="col-actions">
+            <div class="btn-row">
+              <a class="btn btn-sm" href="/admin/posts/{{.ID}}/edit">继续写</a>
+              <form method="post" action="/admin/posts/{{.ID}}/toggle">
+                <input type="hidden" name="_csrf" value="{{$.CSRF}}">
+                <button class="btn btn-sm btn-primary" type="submit">发布</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+{{end}}

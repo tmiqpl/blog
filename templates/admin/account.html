@@ -1,0 +1,67 @@
+{{define "title"}}账号设置 · 管理后台{{end}}
+
+{{define "content"}}
+<div class="panel" style="max-width:620px">
+  <div class="panel-head">
+    <h2 class="panel-title">账号与密码</h2>
+  </div>
+  <div class="panel-body">
+    {{if .Error}}
+      <div class="flash flash-error" role="alert">{{.Error}}</div>
+    {{end}}
+
+    <form method="post" action="/admin/account">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+
+      <div class="form-grid">
+        <label class="field span-2">
+          <span class="field-label">当前密码</span>
+          <input type="password" name="current_password" required autocomplete="current-password">
+          <span class="field-hint">修改任何信息都需要验证当前密码</span>
+        </label>
+
+        <label class="field span-2">
+          <span class="field-label">用户名</span>
+          <input type="text" name="username" value="{{.Username}}" required maxlength="40" autocomplete="username">
+        </label>
+
+        <label class="field">
+          <span class="field-label">新密码</span>
+          <input type="password" name="new_password" minlength="8" autocomplete="new-password"
+                 placeholder="留空表示不修改">
+          <span class="field-hint">至少 8 个字符</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">确认新密码</span>
+          <input type="password" name="confirm_password" minlength="8" autocomplete="new-password"
+                 placeholder="再次输入新密码">
+        </label>
+      </div>
+
+      <div class="flash flash-info" style="margin:1.25rem 0 0">
+        修改密码后，所有已登录的会话都会失效，需要使用新密码重新登录。
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="panel" style="max-width:620px">
+  <div class="panel-head">
+    <h2 class="panel-title">安全提示</h2>
+  </div>
+  <div class="panel-body">
+    <ul class="field-hint" style="margin:0;padding-left:1.1rem;line-height:1.9">
+      <li>密码使用 PBKDF2-HMAC-SHA256（12 万次迭代）加盐哈希后存储，数据库中不保存明文。</li>
+      <li>连续 8 次登录失败会锁定该来源 IP 10 分钟。</li>
+      <li>所有写操作都经过 CSRF 令牌校验。</li>
+      <li>登录会话保存在服务端内存中，服务重启后需要重新登录。</li>
+      <li>如果站点部署在公网，建议同时通过 Nginx 配置 HTTPS 与访问限制。</li>
+    </ul>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,66 @@
+{{define "title"}}{{.Post.Title}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="layout{{if .TOC}} layout--with-toc{{end}}">
+  {{if .TOC}}
+    <nav class="toc" aria-label="文章目录">
+      <p class="toc-title">目录</p>
+      <ul class="toc-list">
+        {{range .TOC}}
+          <li class="toc-item toc-level-{{.Level}}">
+            <a href="#{{.ID}}">{{.Text}}</a>
+          </li>
+        {{end}}
+      </ul>
+    </nav>
+  {{end}}
+
+  <div class="content-col">
+    <nav class="crumb" aria-label="面包屑">
+      <a href="/">首页</a>
+      <span aria-hidden="true">/</span>
+      <span class="crumb-current">{{truncate .Post.Title 24}}</span>
+    </nav>
+
+    <article class="post">
+      <header class="post-header">
+        <div class="post-meta">
+          <time datetime="{{formatDateShort .Post.CreatedAt}}">{{formatDate .Post.CreatedAt}}</time>
+          <span class="meta-dot" aria-hidden="true">·</span>
+          <span>{{.Post.ReadingMinutes}} 分钟阅读</span>
+          {{if ne .Post.UpdatedAt .Post.CreatedAt}}
+            <span class="meta-dot" aria-hidden="true">·</span>
+            <span>更新于 {{formatDateShort .Post.UpdatedAt}}</span>
+          {{end}}
+        </div>
+        <h1 class="post-title">{{.Post.Title}}</h1>
+        {{if .Post.Tags}}
+          <div class="post-tags">
+            {{range .Post.Tags}}<a class="chip" href="/tag/{{.Slug}}">#{{.Name}}</a>{{end}}
+          </div>
+        {{end}}
+      </header>
+
+      <div class="prose" id="article-body">{{.Content}}</div>
+    </article>
+
+    <div class="post-footer-actions">
+      <a class="btn" href="/">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        返回文章列表
+      </a>
+    </div>
+
+    {{if .Related}}
+      <section class="related">
+        <h2 class="section-title">相关文章</h2>
+        <div class="post-list">
+          {{range .Related}}{{template "post-card" .}}{{end}}
+        </div>
+      </section>
+    {{end}}
+  </div>
+
+  {{template "sidebar" .}}
+</div>
+{{end}}

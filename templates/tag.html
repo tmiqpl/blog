@@ -1,0 +1,29 @@
+{{define "title"}}标签：{{.ActiveTag.Name}} · {{.Site.Title}}{{end}}
+
+{{define "content"}}
+<div class="layout">
+  <div class="content-col">
+    <nav class="crumb" aria-label="面包屑">
+      <a href="/tags">全部标签</a>
+      <span aria-hidden="true">/</span>
+      <span class="crumb-current">{{.ActiveTag.Name}}</span>
+    </nav>
+
+    <header class="page-head">
+      <h1><span class="heading-hash" aria-hidden="true">#</span>{{.ActiveTag.Name}}</h1>
+      <p class="page-sub">{{.Subheading}}</p>
+    </header>
+
+    {{if .Posts}}
+      <div class="post-list post-list--grid">
+        {{range .Posts}}{{template "post-card" .}}{{end}}
+      </div>
+      {{template "pagination" .Page}}
+    {{else}}
+      {{template "empty-state" "该标签下暂时还没有文章。"}}
+    {{end}}
+  </div>
+
+  {{template "sidebar" .}}
+</div>
+{{end}}

@@ -46,7 +46,7 @@
 | 搜索 | `/search?q=` | 标题、摘要、正文匹配 |
 | 站点初始化 | `/init` | 首次启动时引导完成设置，初始化后自动关闭 |
 
-其他特性：深色/浅色主题切换（跟随系统偏好并记忆选择）、响应式布局、`/` 快捷键聚焦搜索框、打印样式。
+其他特性：深色/浅色主题切换（跟随系统偏好并记忆选择）、响应式布局、`/` 快捷键聚焦搜索框、打印样式、响应体自动压缩（`br`/`gzip`/`deflate`）。
 
 ### 响应式布局
 
@@ -90,10 +90,30 @@
 | 模板 | `html/template` | 自动上下文转义，模板在编译期校验 |
 | Markdown | `github.com/yuin/goldmark` | CommonMark 兼容，GFM 扩展，自定义中文友好锚点 |
 | 人机校验 | `image` + `image/jpeg` | 滑块拼图与字符验证码均由服务端程序化生成，不依赖字体文件或图形库 |
+| 响应压缩 | `compress/gzip`、`compress/zlib`、`andybalholm/brotli` | 超过阈值（默认 5KB）的响应按 `br > gzip > deflate` 协商压缩，纯 Go 实现 |
 | 密码 | `crypto/pbkdf2` | Go 标准库，无额外依赖 |
 | 前端 | 原生 CSS/JS | 无构建步骤，无 CDN 依赖 |
 
-第三方依赖只有两个（`goldmark` 与 `sqlite` 驱动），其余全部来自标准库。
+第三方依赖只有三个（`goldmark`、`sqlite` 驱动与 `brotli`），其余全部来自标准库。
+
+### 响应压缩
+
+服务端自带压缩，不依赖 Nginx 的 `gzip` 指令。规则见 `internal/compress`：
+
+- **只在响应体超过阈值时压缩**，阈值默认 5KB，用 `-compress` 调整（如 `-compress 2KB`），
+  `-compress off` 可整体关闭。更小的响应压完往往更大，还白白花 CPU。
+- **编码按客户端 `Accept-Encoding` 协商**，优先级固定为 `br` → `gzip` → `deflate`；
+  客户端用 `q=0` 明确拒绝的算法会被跳过（如 `br;q=0, gzip` 会走 gzip）。
+- **只压文本类内容**（`text/*`、`*+json`、`*+xml`、`application/json`、`image/svg+xml` 等）。
+  图片、音视频、`woff2` 本身已是压缩格式，再压一遍只会更大。
+- **这些情形原样透传**：`HEAD` 请求、带 `Range` 的请求、`204/205/304` 响应、
+  已自带 `Content-Encoding` 的响应，以及处理器主动 `Flush` 的流式输出。
+- 压缩后移除 `Content-Length` 与 `Accept-Ranges`：长度已不可预知，响应改走 chunked 传输。
+  （压缩后体积很小时，`net/http` 会自行补上一个按**压缩后**体积计算的 `Content-Length`，同样正确。）
+  启用压缩时所有响应都会带上 `Vary: Accept-Encoding`，避免共享缓存串味。
+
+> ⚠️ **反向代理下请关掉 Nginx 的 gzip**（不要写 `gzip on;`）。两边同时压会导致
+> 响应被压两遍，既浪费 CPU，也容易在部分客户端上出现解码问题。
 
 ## 快速开始
 
@@ -143,11 +163,15 @@ go build -o blog.exe .
   -about content/about.md \        # 关于页内容
   -admin-user admin \              # 预填初始化表单里的管理员用户名
   -captcha slider \                # 登录人机校验：slider | image | off
+  -compress 5KB \                  # 响应压缩：阈值或 off
   -dev                             # 开发模式：禁用静态资源缓存
 ```
 
 > 管理员密码不在命令行或环境变量里设置，而是在 `/init` 页面填写——避免明文密码出现在
 > 进程列表（`ps`）和 systemd 单元文件里。
+
+`./blog.exe help`、`./blog.exe serve -h`、`./blog.exe serve --help` 会打印同一份完整参数说明
+（各子命令都支持 `-h` / `--help`），内容与本节一致。
 
 `-captcha` 控制后台登录的人机校验方式，默认 `slider`：
 
@@ -157,7 +181,18 @@ go build -o blog.exe .
 | `image` | 输入图形字符验证码 |
 | `off` | 关闭，仅建议在内网或本地开发时使用 |
 
-也支持环境变量：`BLOG_ADDR`、`BLOG_DB`、`BLOG_ABOUT`、`BLOG_ADMIN_USER`、`BLOG_CAPTCHA`、`BLOG_TITLE`、`BLOG_AUTHOR`、`BLOG_DESCRIPTION`、`BLOG_BIO`、`BLOG_GITHUB`、`BLOG_EMAIL`、`BLOG_ICP`。
+`-compress` 用一个参数同时管开关与阈值，默认 `5KB`：
+
+| 取值 | 说明 |
+| --- | --- |
+| `5KB` / `10240` / `1MB` | 响应体**超过**该阈值才压缩。单位按 1024 进制，可写 `5K`、`5KiB`、`0.5MB` |
+| `off` | 关闭压缩（也接受 `none` / `false` / `no` / `0`） |
+| `on` | 开启压缩并使用默认阈值（也接受 `true` / `auto`） |
+
+> 阈值调大意味着压缩得更少；调得过小反而会让响应变大、更费 CPU。
+> 上限是 1GB，再大就等于不压，请直接用 `off`。
+
+也支持环境变量：`BLOG_ADDR`、`BLOG_DB`、`BLOG_ABOUT`、`BLOG_ADMIN_USER`、`BLOG_CAPTCHA`、`BLOG_COMPRESS`、`BLOG_TITLE`、`BLOG_AUTHOR`、`BLOG_DESCRIPTION`、`BLOG_BIO`、`BLOG_GITHUB`、`BLOG_EMAIL`、`BLOG_ICP`。
 
 `BLOG_TITLE` 等站点信息只用于**预填初始化表单**，真正生效的是你在页面上提交的值；初始化完成后这些环境变量不再有影响，改动请到后台「站点设置」。
 
@@ -355,6 +390,7 @@ blog/
 │   ├── auth/                    # 密码哈希、会话管理、登录限流
 │   ├── captcha/                 # 人机校验：滑块拼图 + 字符验证码（均为程序化生成图片）
 │   ├── content/                 # front matter 解析
+│   ├── compress/                # 响应压缩中间件（br / gzip / deflate）
 │   ├── markdown/                # Markdown 渲染与摘要提取
 │   ├── models/                  # 数据模型
 │   ├── setup/                   # 站点初始化状态（前台后台共享）
@@ -467,6 +503,8 @@ SQLite 已启用 WAL 模式、`busy_timeout` 与连接池写限制，兼顾并�
 - Markdown 渲染开启了 `WithUnsafe()` 以支持内嵌 HTML，因此**后台账号等同于完全可信**，不要开放给他人
 - 搜索使用 `LIKE` 模糊匹配，文章量达到数万篇时建议换成 SQLite FTS5
 - 未提供图片上传，配图需要自行使用外链
+- 响应压缩是**逐次实时计算**的，没有预压缩缓存：静态资源每次请求都要重压一遍。
+  流量上来后可以改为构建期生成 `.br`/`.gz` 预压缩文件（或交给 CDN）
 
 ## 许可证
 

@@ -2,7 +2,7 @@
 //
 // 用法：
 //
-//	blog serve  [-addr :18080] [-db data/blog.db] [-about content/about.md] [-dev]
+//	blog serve  [-addr :18080] [-db data/blog.db] [-about content/about.md] [-compress 5KB] [-dev]
 //	blog import [-db data/blog.db] [-draft] [目录]     # 从 Markdown 文件导入文章
 //	blog export [-db data/blog.db] [目录]              # 把文章导出为 Markdown 文件
 package main
@@ -28,6 +28,7 @@ import (
 	"github.com/tmiqpl/blog/internal/admin"
 	"github.com/tmiqpl/blog/internal/auth"
 	"github.com/tmiqpl/blog/internal/captcha"
+	"github.com/tmiqpl/blog/internal/compress"
 	"github.com/tmiqpl/blog/internal/content"
 	"github.com/tmiqpl/blog/internal/setup"
 	"github.com/tmiqpl/blog/internal/store"
@@ -90,7 +91,7 @@ func usage() {
 
 用法:
   blog serve  [-addr :18080] [-db data/blog.db] [-about content/about.md]
-              [-admin-user admin] [-captcha slider|image|off] [-dev]
+              [-admin-user admin] [-captcha slider|image|off] [-compress 5KB|off] [-dev]
   blog import [-db data/blog.db] [-draft] [目录]
   blog export [-db data/blog.db] [目录]
   blog version
@@ -100,11 +101,18 @@ func usage() {
   import  从目录中的 Markdown 文件批量导入文章，默认目录 posts
   export  把数据库中的文章导出为 Markdown 文件，默认目录 posts-export
   version 打印版本与构建目标平台
+  help    查看本帮助（-h / --help 等效，各子命令也支持 -h）
 
   -captcha 控制后台登录的人机校验方式，默认 slider：
     slider  拖动滑块完成拼图（默认）
     image   输入图形字符验证码
     off     关闭（仅建议在内网或本地开发时使用）
+
+  -compress 控制响应压缩，一个参数同时管开关与阈值，默认 5KB：
+    5KB / 10240 / 1MB   响应体超过该阈值才压缩，单位按 1024 进制
+    off                 关闭压缩（也可写 none / false / 0）
+    on                  开启压缩并使用默认阈值
+  阈值越大压得越少，压得太小的响应反而更大、更费 CPU。
 
 首次启动:
   数据库为空时站点处于「未初始化」状态，访问任何页面都会引导到 /init。
@@ -113,7 +121,7 @@ func usage() {
 
 环境变量:
   BLOG_ADDR / BLOG_DB / BLOG_ABOUT
-  BLOG_ADMIN_USER / BLOG_CAPTCHA
+  BLOG_ADMIN_USER / BLOG_CAPTCHA / BLOG_COMPRESS
   BLOG_TITLE / BLOG_AUTHOR / BLOG_DESCRIPTION / BLOG_BIO
   BLOG_GITHUB / BLOG_EMAIL / BLOG_ICP
 `)
@@ -123,17 +131,27 @@ func usage() {
 
 func cmdServe(args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
+	// 让 `blog serve -h/--help` 打印项目自己的帮助文本，
+	// 而不是 flag 包自动生成的那份（两者容易不一致）
+	flags.Usage = usage
 	addr := flags.String("addr", env("BLOG_ADDR", ":18080"), "HTTP 监听地址")
 	dbPath := flags.String("db", env("BLOG_DB", defaultDBPath), "SQLite 数据库文件路径")
 	aboutPath := flags.String("about", env("BLOG_ABOUT", "content/about.md"), "关于页 Markdown 文件路径")
 	adminUser := flags.String("admin-user", env("BLOG_ADMIN_USER", "admin"), "初始化页面预填的管理员用户名")
 	captchaMode := flags.String("captcha", env("BLOG_CAPTCHA", admin.CaptchaModeSlider),
 		"后台登录人机校验方式：slider（滑块拼图）| image（字符验证码）| off（关闭）")
+	compressArg := flags.String("compress", env("BLOG_COMPRESS", "5KB"),
+		"响应压缩：阈值（5KB / 10240 / 1MB）或 off（关闭）")
 	dev := flags.Bool("dev", false, "开发模式：禁用静态资源缓存")
 	_ = flags.Parse(args)
 
 	logger := newLogger()
 	slog.SetDefault(logger)
+
+	compressSpec, err := compress.ParseSpec(*compressArg)
+	if err != nil {
+		return fmt.Errorf("解析 -compress 参数失败: %w", err)
+	}
 
 	db, err := store.Open(*dbPath)
 	if err != nil {
@@ -211,9 +229,13 @@ func cmdServe(args []string) error {
 	root.Handle("/admin/", adminSrv.Handler())
 	root.Handle("/", siteSrv.Handler())
 
+	// 压缩放在日志内层：日志里的 bytes 就是实际发出的字节数，
+	// 便于直观看出压缩带来的收益。关闭压缩时这一层直接透传，没有额外开销。
+	compressed := compressSpec.Middleware(root)
+
 	httpServer := &http.Server{
 		Addr:              *addr,
-		Handler:           logRequests(logger, root),
+		Handler:           logRequests(logger, compressed),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -244,7 +266,8 @@ func cmdServe(args []string) error {
 		logger.Info("服务已启动",
 			"url", "http://localhost"+normalizeAddr(*addr),
 			"admin", "http://localhost"+normalizeAddr(*addr)+"/admin",
-			"captcha", displayCaptchaMode(mode))
+			"captcha", displayCaptchaMode(mode),
+			"compress", compressSpec.String())
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
@@ -270,6 +293,7 @@ func cmdServe(args []string) error {
 
 func cmdImport(args []string) error {
 	flags := flag.NewFlagSet("import", flag.ExitOnError)
+	flags.Usage = usage
 	dbPath := flags.String("db", env("BLOG_DB", defaultDBPath), "SQLite 数据库文件路径")
 	asDraft := flags.Bool("draft", false, "全部以草稿形式导入（站点上不显示）")
 	_ = flags.Parse(args)
@@ -392,6 +416,7 @@ func fallbackTitle(body, path string) string {
 
 func cmdExport(args []string) error {
 	flags := flag.NewFlagSet("export", flag.ExitOnError)
+	flags.Usage = usage
 	dbPath := flags.String("db", env("BLOG_DB", defaultDBPath), "SQLite 数据库文件路径")
 	_ = flags.Parse(args)
 

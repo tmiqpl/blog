@@ -3,6 +3,7 @@ module github.com/tmiqpl/blog
 go 1.27.0
 
 require (
+	github.com/andybalholm/brotli v1.2.5
 	github.com/yuin/goldmark v1.8.6
 	modernc.org/sqlite v1.59.0
 )

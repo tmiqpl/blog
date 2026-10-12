@@ -516,7 +516,7 @@ func (s *Server) savePost(w http.ResponseWriter, r *http.Request, sess *auth.Ses
 	}
 
 	tags := splitTags(form.Tags)
-	_, isNew, err := s.store.UpsertPost(store.PostInput{
+	input := store.PostInput{
 		Title:     form.Title,
 		Slug:      slug,
 		Summary:   form.Summary,
@@ -524,7 +524,16 @@ func (s *Server) savePost(w http.ResponseWriter, r *http.Request, sess *auth.Ses
 		Published: form.Published,
 		CreatedAt: createdAt,
 		Tags:      tags,
-	})
+	}
+
+	// 编辑走按 ID 更新：UpsertPost 按 slug 定位，改别名会查不到原记录而新增一篇
+	// （见 issue #3）；新建（id == 0）仍走 UpsertPost。
+	var isNew bool
+	if id != 0 {
+		err = s.store.UpdatePostByID(id, input)
+	} else {
+		_, isNew, err = s.store.UpsertPost(input)
+	}
 	if err != nil {
 		s.renderEditorWithErrors(w, r, sess, id, form, []string{"保存失败：" + err.Error()}, title)
 		return

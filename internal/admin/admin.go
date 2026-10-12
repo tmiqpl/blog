@@ -193,6 +193,11 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /admin/settings", s.requireAuth(s.handleSettings))
 	mux.HandleFunc("POST /admin/settings", s.requireAuth(s.handleSettingsSave))
 
+	// MCP 接入
+	mux.HandleFunc("GET /admin/mcp", s.requireAuth(s.handleMCP))
+	mux.HandleFunc("POST /admin/mcp/token", s.requireAuth(s.handleMCPTokenGenerate))
+	mux.HandleFunc("POST /admin/mcp/token/delete", s.requireAuth(s.handleMCPTokenRevoke))
+
 	// 账号设置
 	mux.HandleFunc("GET /admin/account", s.requireAuth(s.handleAccount))
 	mux.HandleFunc("POST /admin/account", s.requireAuth(s.handleAccountSave))

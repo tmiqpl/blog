@@ -79,6 +79,7 @@
 - **发布控制**：一键发布/转草稿，草稿不会出现在站点上
 - **标签管理**：重命名、修改别名、删除（可选连同文章删除）、清理空标签
 - **站点设置**：站点标题、描述、作者、简介、GitHub、邮箱、ICP 备案号，保存后前台立即生效
+- **MCP 接入**：生成/撤销 MCP 访问令牌，供 AI 客户端通过 `/mcp` 读写文章
 - **账号设置**：修改用户名与密码，改密后强制所有会话重新登录
 
 ## 技术选型
@@ -248,6 +249,57 @@ draft: false
 ./blog.exe export posts-export
 ```
 
+## MCP 接入
+
+博客内置了一个 [MCP](https://modelcontextprotocol.io)（Model Context Protocol）服务，
+让 Claude Code、Claude Desktop 等支持 MCP 的 AI 客户端能够直接读取、新增与编辑文章。
+
+服务与前台、后台跑在同一端口上，路径为 `/mcp`，使用 **Streamable HTTP** 传输，
+并复用同一个 SQLite 连接——因此通过 MCP 写入的文章在前台**立即可见**。
+
+### 开启步骤
+
+1. 启动服务：`./blog serve`
+2. 登录后台，进入 **MCP 接入**（`/admin/mcp`），点「生成令牌」，复制生成的令牌
+3. 在客户端配置里填入站点地址与令牌
+
+以 Claude Code 为例，把下面这段写进项目根的 `.mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "blog": {
+      "type": "http",
+      "url": "https://你的域名/mcp",
+      "headers": {
+        "Authorization": "Bearer bmt_xxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+> 未生成令牌时 `/mcp` 对外返回 **404**（相当于默认关闭）；生成后令牌校验失败返回 **401**。
+> 在后台点「重新生成」或「撤销令牌」会让旧令牌**立即失效**，已配置的客户端需要同步更新。
+
+### 可用工具
+
+| 工具 | 作用 | 主要参数 |
+| --- | --- | --- |
+| `create_post` | 新增文章 | `title`、`content`（必填）；`slug`、`summary`、`tags`、`published`、`createdAt` 可选 |
+| `update_post` | 按 ID 编辑文章 | `id`（必填）+ 要改的字段（未传的字段保持原值）；可同时改 `slug` |
+| `list_posts` | 列出文章（含草稿，不含正文） | `status`（all/published/draft）、`keyword`、`limit` |
+| `get_post` | 读取文章全文 | `id` |
+
+工具执行业务失败（如别名冲突、文章不存在）时会返回错误文本并标记 `isError`，
+便于模型看到原因后自行纠正。
+
+### 安全提示
+
+- MCP 令牌明文存于数据库 `settings` 表，持有令牌即可**读写全部文章**，请妥善保管并**配合 HTTPS** 使用
+- 令牌不区分来源 IP，也未做请求频率限制；暴露在公网时建议在 Nginx 层限制 `/mcp` 的来源
+- MCP 采用 Markdown 原文写入，与后台一致，**不要将令牌交给不可信的客户端**
+
 ## 部署到 Linux
 
 项目是纯 Go 实现（`modernc.org/sqlite` 不需要 CGO），在 Windows / macOS 上可以直接交叉编译出 Linux 二进制，**不需要 Docker、虚拟机或 Linux 环境**。
@@ -392,6 +444,9 @@ blog/
 │   ├── content/                 # front matter 解析
 │   ├── compress/                # 响应压缩中间件（br / gzip / deflate）
 │   ├── markdown/                # Markdown 渲染与摘要提取
+│   ├── mcp/                     # MCP 服务（/mcp，Streamable HTTP）
+│   │   ├── server.go            #   服务构建、工具注册、Bearer 鉴权
+│   │   └── tools.go             #   工具入参/处理函数
 │   ├── models/                  # 数据模型
 │   ├── setup/                   # 站点初始化状态（前台后台共享）
 │   ├── site/                    # 站点配置（数据库设置 + 默认值回退）
@@ -505,6 +560,7 @@ SQLite 已启用 WAL 模式、`busy_timeout` 与连接池写限制，兼顾并�
 - 未提供图片上传，配图需要自行使用外链
 - 响应压缩是**逐次实时计算**的，没有预压缩缓存：静态资源每次请求都要重压一遍。
   流量上来后可以改为构建期生成 `.br`/`.gz` 预压缩文件（或交给 CDN）
+- MCP 服务只做令牌鉴权，不做来源 IP 限制与频率限制；修改文章 slug 后旧链接会失效（无重定向），与后台编辑行为一致
 
 ## 许可证
 

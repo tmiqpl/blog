@@ -1,0 +1,92 @@
+{{define "title"}}MCP 接入 · 管理后台{{end}}
+
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">关于 MCP</h2>
+  </div>
+  <div class="panel-body">
+    <p class="field-hint" style="margin:0 0 .6rem">
+      开启后，支持 MCP（Model Context Protocol）的 AI 客户端可以通过
+      <code>POST /mcp</code> 读取、新增与编辑本站文章。服务与后台共用同一个数据库，
+      写入后前台立即生效。
+    </p>
+    <p class="field-hint" style="margin:0">
+      可用工具：<code>create_post</code>（新增）、<code>update_post</code>（按 ID 编辑）、
+      <code>list_posts</code>（列出）、<code>get_post</code>（读取全文）。
+    </p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">访问令牌</h2>
+    <span class="spacer"></span>
+    {{if .Configured}}
+      <span class="field-hint">已启用</span>
+    {{else}}
+      <span class="field-hint">未启用，/mcp 返回 404</span>
+    {{end}}
+  </div>
+  <div class="panel-body">
+    {{if .Configured}}
+      <label class="field">
+        <span class="field-label">当前令牌</span>
+        <input type="text" id="mcp-token" value="{{.Token}}" readonly onclick="this.select()">
+        <span class="field-hint">请妥善保管，持有该令牌即可读写你的文章</span>
+      </label>
+
+      <div class="btn-row" style="margin-top:1rem">
+        <button class="btn" type="button" id="mcp-copy">复制令牌</button>
+
+        <form method="post" action="/admin/mcp/token"
+              data-confirm="重新生成会让旧令牌立即失效，已配置的客户端需要同步更新。确定继续吗？">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}">
+          <button class="btn" type="submit">重新生成</button>
+        </form>
+
+        <form method="post" action="/admin/mcp/token/delete"
+              data-confirm="撤销后 /mcp 端点将关闭，所有客户端都会失去访问。确定继续吗？">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}">
+          <button class="btn btn-danger" type="submit">撤销令牌</button>
+        </form>
+      </div>
+    {{else}}
+      <p class="field-hint" style="margin:0 0 1rem">
+        尚未生成令牌，<code>/mcp</code> 端点对外返回 404。生成后即可在客户端中配置。
+      </p>
+      <form method="post" action="/admin/mcp/token">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <button class="btn btn-primary" type="submit">生成令牌</button>
+      </form>
+    {{end}}
+  </div>
+</div>
+
+{{if .Configured}}
+<div class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">客户端配置</h2>
+    <span class="spacer"></span>
+    <button class="btn btn-sm" type="button" id="mcp-copy-config">复制配置</button>
+  </div>
+  <div class="panel-body">
+    <p class="field-hint" style="margin:0 0 .8rem">
+      以 Claude Code 为例，把下面这段放进 <code>.mcp.json</code>（或对应客户端的配置文件）即可。
+      把 <code>路径</code> 换成你的站点地址。
+    </p>
+<pre class="mcp-config" id="mcp-config">{
+  "mcpServers": {
+    "blog": {
+      "type": "http",
+      "url": "https://你的域名/mcp",
+      "headers": {
+        "Authorization": "Bearer {{.Token}}"
+      }
+    }
+  }
+}</pre>
+  </div>
+</div>
+{{end}}
+{{end}}

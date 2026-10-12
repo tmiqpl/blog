@@ -564,6 +564,64 @@
     load();
   }
 
+  /* ---------- MCP 接入：复制令牌 / 配置 ---------- */
+  function initMCPCopy() {
+    function flash(btn, text) {
+      var original = btn.textContent;
+      btn.textContent = text;
+      btn.disabled = true;
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 1500);
+    }
+
+    function copyFrom(source, btn) {
+      if (!source) return;
+      var text = source.value !== undefined ? source.value : source.textContent;
+      copyText(text, function (ok) {
+        flash(btn, ok ? "已复制" : "复制失败");
+      });
+    }
+
+    function copyText(text, done) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { done(true); },
+          function () { done(fallbackCopy(text)); }
+        );
+        return;
+      }
+      done(fallbackCopy(text));
+    }
+
+    function fallbackCopy(text) {
+      var area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { /* 忽略 */ }
+      document.body.removeChild(area);
+      return ok;
+    }
+
+    var copyToken = document.getElementById("mcp-copy");
+    var token = document.getElementById("mcp-token");
+    if (copyToken && token) {
+      copyToken.addEventListener("click", function () { copyFrom(token, copyToken); });
+    }
+
+    var copyConfig = document.getElementById("mcp-copy-config");
+    var config = document.getElementById("mcp-config");
+    if (copyConfig && config) {
+      copyConfig.addEventListener("click", function () { copyFrom(config, copyConfig); });
+    }
+  }
+
   function init() {
     initTheme();
     initMobileNav();
@@ -571,6 +629,7 @@
     initCaptcha();
     initSlider();
     initEditor();
+    initMCPCopy();
   }
 
   if (document.readyState === "loading") {

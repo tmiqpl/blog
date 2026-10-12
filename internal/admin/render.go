@@ -18,6 +18,7 @@ const (
 	navPosts     = "posts"
 	navTags      = "tags"
 	navSettings  = "settings"
+	navMCP       = "mcp"
 	navAccount   = "account"
 )
 
@@ -247,7 +248,7 @@ func relativeTime(t time.Time) string {
 }
 
 // pageNames 列出所有后台页面模板。
-var pageNames = []string{"login", "dashboard", "posts", "editor", "tags", "settings", "account", "error"}
+var pageNames = []string{"login", "dashboard", "posts", "editor", "tags", "settings", "mcp", "account", "error"}
 
 // loadTemplates 为每个后台页面构建独立的模板集合。
 func loadTemplates(fsys fs.FS) (map[string]*template.Template, error) {

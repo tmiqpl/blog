@@ -28,6 +28,7 @@ const (
 // testEnv 把测试用到的服务与其内部的人机校验管理器打包返回。
 type testEnv struct {
 	server  *Server
+	store   *store.Store
 	captcha *captcha.Manager
 	slider  *captcha.SliderManager
 }
@@ -73,6 +74,7 @@ func newTestServerWithSlider(t *testing.T, mode string, sliderOpts captcha.Slide
 		t.Fatalf("构造后台服务失败: %v", err)
 	}
 	env.server = srv
+	env.store = st
 	return env
 }
 

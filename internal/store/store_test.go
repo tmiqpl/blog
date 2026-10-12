@@ -1,7 +1,9 @@
 package store
 
 import (
+	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -767,5 +769,113 @@ func TestSlugify(t *testing.T) {
 		if got := Slugify(input); got != want {
 			t.Errorf("Slugify(%q) = %q，期望 %q", input, got, want)
 		}
+	}
+}
+
+func TestValidSlug(t *testing.T) {
+	valid := []string{"hello-world", "中文别名", "a_b-c9", "Go1"}
+	for _, s := range valid {
+		if !ValidSlug(s) {
+			t.Errorf("ValidSlug(%q) = false，期望 true", s)
+		}
+	}
+
+	invalid := []string{"", "hello world", "a/b", "a.b", "emoji😀", "tab\t"}
+	for _, s := range invalid {
+		if ValidSlug(s) {
+			t.Errorf("ValidSlug(%q) = true，期望 false", s)
+		}
+	}
+
+	if ValidSlug(strings.Repeat("a", 121)) {
+		t.Error("超过 120 个字符的别名应无效")
+	}
+}
+
+func TestUpdatePostByID(t *testing.T) {
+	st := newTestStore(t)
+	id := mustCreate(t, st, PostInput{
+		Title:     "原标题",
+		Slug:      "old-slug",
+		Content:   "原正文",
+		Published: true,
+		Tags:      []string{"Go", "后端"},
+	})
+
+	// 更新标题与正文，并改 slug
+	if err := st.UpdatePostByID(id, PostInput{
+		Title:     "新标题",
+		Slug:      "new-slug",
+		Content:   "新正文",
+		Published: false,
+		Tags:      []string{"Go"},
+	}); err != nil {
+		t.Fatalf("按 ID 更新失败: %v", err)
+	}
+
+	post, err := st.GetPostByID(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if post.Title != "新标题" {
+		t.Errorf("标题 = %q", post.Title)
+	}
+	// 关键：改 slug 后仍应是同一条记录，而不是新增
+	if post.Slug != "new-slug" {
+		t.Errorf("slug = %q，期望 new-slug", post.Slug)
+	}
+	if post.Content != "新正文" {
+		t.Errorf("正文 = %q", post.Content)
+	}
+	if post.Published {
+		t.Error("应已转为草稿")
+	}
+	if len(post.Tags) != 1 || post.Tags[0].Name != "Go" {
+		t.Errorf("标签应重建为 [Go]，实际 %+v", post.Tags)
+	}
+
+	// 原 slug 应已释放
+	if _, err := st.GetPostByID(id); err != nil {
+		t.Fatal(err)
+	}
+	taken, err := st.SlugTaken("new-slug", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !taken {
+		t.Error("新 slug 应已被占用")
+	}
+
+	// 文章的创建时间不应被清空
+	if post.CreatedAt.IsZero() {
+		t.Error("创建时间不应为零值")
+	}
+}
+
+func TestUpdatePostByIDNotFound(t *testing.T) {
+	st := newTestStore(t)
+
+	err := st.UpdatePostByID(9999, PostInput{Title: "x", Content: "y"})
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("更新不存在的文章应返回 ErrNotFound，实际 %v", err)
+	}
+}
+
+func TestUpdatePostByIDSlugConflict(t *testing.T) {
+	st := newTestStore(t)
+	mustCreate(t, st, PostInput{Title: "A", Slug: "slug-a", Content: "a", Published: true})
+	idB := mustCreate(t, st, PostInput{Title: "B", Slug: "slug-b", Content: "b", Published: true})
+
+	if err := st.UpdatePostByID(idB, PostInput{Title: "B", Slug: "slug-a", Content: "b", Published: true}); err == nil {
+		t.Error("改成已被占用的 slug 应报错")
+	}
+}
+
+func TestUpdatePostByIDValidation(t *testing.T) {
+	st := newTestStore(t)
+	id := mustCreate(t, st, PostInput{Title: "A", Content: "a", Published: true})
+
+	if err := st.UpdatePostByID(id, PostInput{Title: "   ", Content: "a"}); err == nil {
+		t.Error("空标题应返回错误")
 	}
 }

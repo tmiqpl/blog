@@ -607,6 +607,30 @@ textarea { resize: vertical; line-height: 1.7; }
 }
 .form-actions .spacer { margin-left: auto; }
 
+/* ---------- MCP 配置示例 ---------- */
+.admin-content code {
+  padding: .1rem .35rem;
+  border-radius: 4px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  font-family: var(--font-mono);
+  font-size: .82em;
+}
+
+.mcp-config {
+  margin: 0;
+  padding: .9rem 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
 /* ---------- 筛选栏 ---------- */
 .filter-bar {
   display: flex;

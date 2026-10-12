@@ -20,6 +20,9 @@ const (
 	// SettingSiteInitialized 标记站点是否已完成初始化。
 	// 该键不存在或值不为 "1" 时，前台与后台都会把访客引导到初始化页面。
 	SettingSiteInitialized = "site_initialized"
+	// SettingMCPToken 是 MCP 服务（/mcp）的访问令牌。
+	// 为空时 /mcp 端点对外返回 404，相当于默认关闭。
+	SettingMCPToken = "mcp_token"
 )
 
 // InitializedValue 是 SettingSiteInitialized 表示「已完成」的取值。

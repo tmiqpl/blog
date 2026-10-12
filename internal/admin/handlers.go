@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -498,7 +497,7 @@ func (s *Server) savePost(w http.ResponseWriter, r *http.Request, sess *auth.Ses
 	if slug == "" {
 		slug = store.Slugify(form.Title)
 	}
-	if !validSlug(slug) {
+	if !store.ValidSlug(slug) {
 		errs = append(errs, "别名只能包含中文、字母、数字、连字符和下划线")
 	} else if taken, err := s.store.SlugTaken(slug, id); err != nil {
 		errs = append(errs, "校验别名失败，请重试")
@@ -878,12 +877,6 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 /* ------------------------------ 工具 ------------------------------ */
-
-var slugPattern = regexp.MustCompile(`^[\p{Han}\p{Latin}\p{N}_-]+$`)
-
-func validSlug(slug string) bool {
-	return slug != "" && len([]rune(slug)) <= 120 && slugPattern.MatchString(slug)
-}
 
 // splitTags 把逗号分隔的标签字符串拆成切片（中英文逗号、分号均可）。
 func splitTags(raw string) []string {

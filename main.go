@@ -30,6 +30,7 @@ import (
 	"github.com/tmiqpl/blog/internal/captcha"
 	"github.com/tmiqpl/blog/internal/compress"
 	"github.com/tmiqpl/blog/internal/content"
+	"github.com/tmiqpl/blog/internal/mcp"
 	"github.com/tmiqpl/blog/internal/setup"
 	"github.com/tmiqpl/blog/internal/store"
 	"github.com/tmiqpl/blog/internal/web"
@@ -102,6 +103,11 @@ func usage() {
   export  把数据库中的文章导出为 Markdown 文件，默认目录 posts-export
   version 打印版本与构建目标平台
   help    查看本帮助（-h / --help 等效，各子命令也支持 -h）
+
+MCP 接入:
+  serve 同时在同一端口暴露 /mcp（Model Context Protocol，Streamable HTTP），
+  让 AI 客户端能够读取、新增与编辑文章。是否启用由后台「MCP 接入」页面控制：
+  未生成访问令牌时 /mcp 返回 404，生成后需在请求头带 Authorization: Bearer <令牌>。
 
   -captcha 控制后台登录的人机校验方式，默认 slider：
     slider  拖动滑块完成拼图（默认）
@@ -223,10 +229,18 @@ func cmdServe(args []string) error {
 		return err
 	}
 
-	// 统一入口：/admin 交给后台，其余交给前台
+	// MCP 服务：让 AI 客户端通过 /mcp 读取与编辑文章。
+	// 与前面几个服务共用同一个数据库连接，因此 MCP 写入后前台立即可见。
+	mcpSrv, err := mcp.NewServer(mcp.Options{Store: db, Version: version})
+	if err != nil {
+		return err
+	}
+
+	// 统一入口：/admin 交给后台，/mcp 交给 MCP 服务，其余交给前台
 	root := http.NewServeMux()
 	root.Handle("/admin", adminSrv.Handler())
 	root.Handle("/admin/", adminSrv.Handler())
+	root.Handle("/mcp", mcpSrv.Handler())
 	root.Handle("/", siteSrv.Handler())
 
 	// 压缩放在日志内层：日志里的 bytes 就是实际发出的字节数，

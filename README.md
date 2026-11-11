@@ -118,13 +118,42 @@
 
 ## 快速开始
 
-```bash
-# 1. 编译
-go build -o blog.exe .
+### 本地编译
 
-# 2. 启动（前台 http://localhost:18080，后台 http://localhost:18080/admin）
-./blog.exe serve
+项目零 CGO 依赖（SQLite 用纯 Go 的 `modernc.org/sqlite`），Windows / macOS / Linux 都能直接用 `go build` 构建，无需 Makefile、Docker 或任何 C 工具链。
+
+```bash
+# Windows（Git Bash / WSL）
+CGO_ENABLED=0 go build -trimpath \
+  -ldflags "-s -w -X main.version=1.0.0-$(date +%Y%m%d) -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o blog.exe .
+
+# Linux / macOS
+CGO_ENABLED=0 go build -trimpath \
+  -ldflags "-s -w -X main.version=1.0.0-$(date +%Y%m%d) -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o blog .
 ```
+
+PowerShell（Windows 原生终端）里没有 `$(date ...)`，改用：
+
+```powershell
+$stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+$ver = '1.0.0-' + (Get-Date -Format 'yyyyMMdd')
+go build -trimpath -ldflags "-s -w -X main.version=$ver -X main.buildDate=$stamp" -o blog.exe .
+```
+
+> `-s -w` 去掉符号表与调试信息（体积约减 30%），`-trimpath` 抹掉本机绝对路径。
+> `-X main.buildDate` 注入编译时间，`./blog.exe version` 会显示 `built <时间>`；不注入则显示 `built unknown`。
+> 用 `go run . version` 或不带 `-ldflags` 构建时，版本号与编译时间分别为 `dev` 与 `unknown`。
+
+### 启动
+
+```bash
+./blog.exe serve    # Windows
+./blog serve        # Linux / macOS
+```
+
+前台在 http://localhost:18080，后台在 http://localhost:18080/admin。
 
 首次启动时数据库是空的，站点处于**未初始化**状态：访问任何页面（包括 `/admin`）都会引导到 `/init`。
 
@@ -306,28 +335,33 @@ draft: false
 
 ### 交叉编译
 
-```bash
-make linux        # 产出 dist/blog-linux-amd64
-make all          # 一次编译 Linux / Windows / macOS
-make dist         # 生成带 systemd 单元的发布包
-```
-
-不用 `make` 的话：
+纯 Go 实现，在 Windows / macOS 上直接一条 `go build` 就能产出 Linux 二进制：
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
-  -ldflags "-s -w -X main.version=1.0.0" -o dist/blog-linux-amd64 .
+  -ldflags "-s -w -X main.version=1.0.0-$(date +%Y%m%d) -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o dist/blog-linux-amd64 .
 ```
 
-产物是**完全静态链接**的 ELF（无 `PT_INTERP`、无 `.dynamic` 节），不依赖 glibc，Alpine 等 musl 发行版也能直接运行。用 `./blog-linux-amd64 version` 可打印版本与构建目标平台。
+PowerShell 写法：
+
+```powershell
+$stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+$ver = '1.0.0-' + (Get-Date -Format 'yyyyMMdd')
+$env:CGO_ENABLED=0; $env:GOOS='linux'; $env:GOARCH='amd64'
+go build -trimpath -ldflags "-s -w -X main.version=$ver -X main.buildDate=$stamp" -o dist/blog-linux-amd64 .
+```
+
+产物是**完全静态链接**的 ELF（无 `PT_INTERP`、无 `.dynamic` 节），不依赖 glibc，Alpine 等 musl 发行版也能直接运行。用 `./blog-linux-amd64 version` 可打印版本、构建目标平台与编译时间。
 
 ### 安装
 
 ```bash
-# 1. 上传并解压（包内已带可执行位，无需 chmod）
-scp dist/blog-linux-amd64.tar.gz user@server:/tmp/
+# 1. 上传二进制与部署文件
+scp dist/blog-linux-amd64 deploy/blog.service deploy/blog.env.example user@server:/tmp/
 ssh user@server
-sudo tar -xzf /tmp/blog-linux-amd64.tar.gz -C /opt
+sudo install -d -m 755 /opt/blog
+sudo install -m 755 /tmp/blog-linux-amd64 /opt/blog/blog-linux-amd64
 
 # 2. 建立专用系统用户与数据目录
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin blog
@@ -336,11 +370,11 @@ sudo chown -R blog:blog /opt/blog
 
 # 3. 配置站点环境变量（权限 600，含密钥，不要写进 systemd 单元）
 sudo install -d -m 750 /etc/blog
-sudo install -m 600 /opt/blog/blog.env.example /etc/blog/blog.env
+sudo install -m 600 /tmp/blog.env.example /etc/blog/blog.env
 sudo nano /etc/blog/blog.env
 
 # 4. 注册为系统服务
-sudo cp /opt/blog/blog.service /etc/systemd/system/
+sudo install -m 644 /tmp/blog.service /etc/systemd/system/blog.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now blog
 journalctl -u blog -f

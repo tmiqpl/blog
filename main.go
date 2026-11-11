@@ -550,6 +550,15 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// Flush 把透传到底层连接。日志中间件包装了全部 handler（含 /mcp），
+// 不透传 Flush 会阻断流式响应（如 MCP SSE）：内层的
+// http.ResponseController.Flush() 会在这一层新掉。
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func env(key, fallback string) string {
 	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
 		return v

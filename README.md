@@ -120,7 +120,7 @@
 
 ### 本地编译
 
-项目零 CGO 依赖（SQLite 用纯 Go 的 `modernc.org/sqlite`），Windows / macOS / Linux 都能直接用 `go build` 构建，无需 Makefile、Docker 或任何 C 工具链。
+项目零 CGO 依赖（SQLite 用纯 Go 的 `modernc.org/sqlite`），Windows / macOS / Linux 都能直接用 `go build` 构建，无需 Docker、虚拟机或任何 C 工具链。
 
 ```bash
 # Windows（Git Bash / WSL）

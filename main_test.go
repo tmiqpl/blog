@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -23,6 +24,21 @@ func (r *flushableRecorder) Flush() {
 // TestLogRequestsForwardsFlush 验证日志中间件的 statusRecorder 不阻断 Flush：
 // 内层处理器（如 MCP 的 SSE 流式响应）调用 http.ResponseController.Flush() 时，
 // 底层连接必须收到 Flush，否则流式输出会被缓冲到响应结束才发出。
+func TestVersionLineIncludesBuildDate(t *testing.T) {
+	oldV, oldD := version, buildDate
+	t.Cleanup(func() { version, buildDate = oldV, oldD })
+
+	version, buildDate = "1.2.3", "2026-11-11T08:30:00Z"
+
+	line := versionLine()
+	if !strings.Contains(line, "2026-11-11") {
+		t.Errorf("版本信息应包含编译日期，实际 %q", line)
+	}
+	if !strings.Contains(line, "1.2.3") {
+		t.Errorf("版本信息应包含版本号，实际 %q", line)
+	}
+}
+
 func TestLogRequestsForwardsFlush(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 

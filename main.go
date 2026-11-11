@@ -51,9 +51,14 @@ const defaultDBPath = "data/blog.db"
 // 源码直接运行时保持 dev，便于区分「自己编译的」和「正式发布的」。
 var version = "dev"
 
+// buildDate 是编译时间（UTC），同样由构建时通过
+// -ldflags "-X main.buildDate=..." 注入；源码直接运行时显示 unknown。
+var buildDate = "unknown"
+
 // versionLine 输出一行可复制的版本信息，方便部署后核对二进制。
 func versionLine() string {
-	return fmt.Sprintf("blog %s (%s/%s, %s)", version, runtime.GOOS, runtime.GOARCH, runtime.Version())
+	return fmt.Sprintf("blog %s (%s/%s, %s, built %s)",
+		version, runtime.GOOS, runtime.GOARCH, runtime.Version(), buildDate)
 }
 
 func main() {

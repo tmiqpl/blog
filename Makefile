@@ -11,11 +11,13 @@
 
 BINARY   := blog
 VERSION  ?= 1.0.0-$(shell date +%Y%m%d)
+BUILDDATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 DIST     := dist
 
 # -s -w 去掉符号表与调试信息（体积约减 30%）
 # -trimpath 抹掉本机绝对路径，保证构建可复现
-LDFLAGS  := -s -w -X main.version=$(VERSION)
+# buildDate 用 UTC 时间戳注入，./blog version 可查编译时间
+LDFLAGS  := -s -w -X main.version=$(VERSION) -X main.buildDate=$(BUILDDATE)
 GOFLAGS  := -trimpath
 
 # modernc.org/sqlite 是纯 Go 实现，关闭 CGO 即可交叉编译，无需 C 工具链

@@ -12,6 +12,7 @@
       <div class="post-list post-list--grid">
         {{range .Posts}}{{template "post-card" .}}{{end}}
       </div>
+      {{template "pagination" .Page}}
     {{else}}
       {{template "empty-state" "没有找到匹配的文章，换个关键词再试试？"}}
     {{end}}

@@ -72,14 +72,20 @@ func (s *Store) ListPostsByTag(tagSlug string, limit, offset int) ([]*models.Pos
 	return posts, s.attachTags(posts)
 }
 
-// SearchPosts 在标题与正文中做模糊匹配。
-func (s *Store) SearchPosts(keyword string, limit int) ([]*models.Post, error) {
+// searchWhere 返回搜索的公共 WHERE 子句与参数，
+// 供 SearchPosts 与 CountSearchPosts 共享，避免两处条件漂移。
+func searchWhere(keyword string) (string, []any) {
 	like := "%" + keyword + "%"
+	return ` WHERE p.published = 1 AND (p.title LIKE ? OR p.content LIKE ? OR p.summary LIKE ?)`, []any{like, like, like}
+}
+
+// SearchPosts 在标题、正文与摘要中做模糊匹配，按创建时间倒序分页。
+func (s *Store) SearchPosts(keyword string, limit, offset int) ([]*models.Post, error) {
+	where, args := searchWhere(keyword)
 	rows, err := s.db.Query(
-		`SELECT `+postColumns+` FROM posts p
-		 WHERE p.published = 1 AND (p.title LIKE ? OR p.content LIKE ? OR p.summary LIKE ?)
-		 ORDER BY p.created_at DESC
-		 LIMIT ?`, like, like, like, limit)
+		`SELECT `+postColumns+` FROM posts p`+where+
+		` ORDER BY p.created_at DESC, p.id DESC
+		 LIMIT ? OFFSET ?`, append(args, limit, offset)...)
 	if err != nil {
 		return nil, fmt.Errorf("搜索文章失败: %w", err)
 	}
@@ -90,6 +96,16 @@ func (s *Store) SearchPosts(keyword string, limit int) ([]*models.Post, error) {
 		return nil, err
 	}
 	return posts, s.attachTags(posts)
+}
+
+// CountSearchPosts 统计命中关键词的已发布文章总数，供分页使用。
+func (s *Store) CountSearchPosts(keyword string) (int, error) {
+	where, args := searchWhere(keyword)
+	var n int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM posts p`+where, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("统计搜索结果失败: %w", err)
+	}
+	return n, nil
 }
 
 // GetPostBySlug 按 slug 获取单篇文章（含标签）。

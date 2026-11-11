@@ -5,6 +5,7 @@ import (
 	"html"
 	"html/template"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -182,7 +183,7 @@ func (s *Server) handleTag(w http.ResponseWriter, r *http.Request) {
 	s.render(w, http.StatusOK, "tag", data)
 }
 
-// handleSearch 处理关键词搜索。
+// handleSearch 处理关键词搜索，与其他列表页一样按页分页。
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	keyword := strings.TrimSpace(r.URL.Query().Get("q"))
 	if keyword == "" {
@@ -193,7 +194,13 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		keyword = string([]rune(keyword)[:64])
 	}
 
-	posts, err := s.store.SearchPosts(keyword, 50)
+	page := pageParam(r)
+	posts, err := s.store.SearchPosts(keyword, PerPage, (page-1)*PerPage)
+	if err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	total, err := s.store.CountSearchPosts(keyword)
 	if err != nil {
 		s.serverError(w, r, err)
 		return
@@ -202,12 +209,16 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	bd := s.base(r, "")
 	bd.Keyword = keyword
 
+	// 关键词必须编码后才能拼进 URL：含 &、#、空格的关键词
+	// 会截断或破坏分页链接（与 postListURL 的做法保持一致）。
+	baseURL := "/search?" + url.Values{"q": {keyword}}.Encode()
+
 	data := indexData{
 		baseData:   bd,
 		Heading:    "搜索结果",
-		Subheading: "关键词「" + keyword + "」，共 " + strconv.Itoa(len(posts)) + " 篇",
+		Subheading: "关键词「" + keyword + "」，共 " + strconv.Itoa(total) + " 篇",
 		Posts:      posts,
-		Page:       buildPagination(1, PerPage, len(posts), "/search?q="+keyword),
+		Page:       buildPagination(page, PerPage, total, baseURL),
 	}
 	s.render(w, http.StatusOK, "search", data)
 }

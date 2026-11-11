@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -393,13 +394,61 @@ func TestSearchPosts(t *testing.T) {
 	}
 
 	for keyword, want := range cases {
-		posts, err := st.SearchPosts(keyword, 20)
+		posts, err := st.SearchPosts(keyword, 20, 0)
 		if err != nil {
 			t.Fatalf("搜索 %q 失败: %v", keyword, err)
 		}
 		if len(posts) != want {
 			t.Errorf("搜索 %q 得到 %d 条，期望 %d", keyword, len(posts), want)
 		}
+	}
+}
+
+func TestSearchPostsPagination(t *testing.T) {
+	st := newTestStore(t)
+
+	// 8 篇命中「分页」的已发布文章，外加 1 篇草稿：计数不应包含草稿
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for i := 1; i <= 8; i++ {
+		mustCreate(t, st, PostInput{
+			Title:     fmt.Sprintf("分页文章%d", i),
+			Slug:      fmt.Sprintf("page-post-%d", i),
+			Content:   "搜索分页测试正文",
+			Published: true,
+			CreatedAt: base.AddDate(0, 0, i),
+		})
+	}
+	mustCreate(t, st, PostInput{Title: "草稿分页文章", Slug: "page-draft", Content: "搜索分页测试正文", Published: false})
+
+	// 计数：只统计已发布
+	total, err := st.CountSearchPosts("分页")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 8 {
+		t.Fatalf("命中「分页」的已发布文章应有 8 篇，实际 %d", total)
+	}
+
+	// 分页：limit 3、offset 6 应返回最后 2 篇
+	page, err := st.SearchPosts("分页", 3, 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 2 {
+		t.Fatalf("第 3 页应有 2 篇，实际 %d", len(page))
+	}
+	// 按创建时间倒序，最后一页是最早的两篇
+	if page[0].Slug != "page-post-2" || page[1].Slug != "page-post-1" {
+		t.Errorf("第 3 页应为 page-post-2、page-post-1，实际 %s、%s", page[0].Slug, page[1].Slug)
+	}
+
+	// 越过末尾的页返回空
+	over, err := st.SearchPosts("分页", 3, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(over) != 0 {
+		t.Errorf("越过末尾的分页应返回空，实际 %d 篇", len(over))
 	}
 }
 
